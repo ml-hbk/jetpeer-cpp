@@ -1,0 +1,8 @@
+libdir=@CMAKE_INSTALL_PREFIX@
+includedir=@CMAKE_INSTALL_PREFIX@
+
+Name: jetpeer
+Description: C++ implementation of an jet peer
+Version: @JETPEER_VERSION@
+Libs: -L${libdir} -ljetpeer
+Cflags: -I${includedir}

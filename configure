@@ -1,0 +1,448 @@
+#!/bin/sh
+# Copyright (c) 2013-2014, Richard Wiedenhöft <richard@wiedenhoeft.xyz>
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+#    list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+# ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+# ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+cmake_args=""
+cmake_env=""
+
+error() {
+    echo "-- ERROR: $1"
+    exit $2;
+}
+
+warning() {
+    echo "-- WARNING: $1"
+}
+
+notify() {
+    echo "-- $1"
+}
+
+# Should only be called while reading arguments.
+# This ensures that $value is set and nonempty
+# (--prefix=/usr). If it is not set it checks
+# if the next arg may be the value (--prefix /usr)
+ensure_value() {
+    if [ -z "$value" ]; then
+        value=$1
+
+        if [ -z "$value" ]; then
+            error "No value given for $key" 1
+        fi
+
+        if [ "`echo $value | head -c 2`" = "--" ]; then
+            error "$key=$value seems to be invalid" 1
+        fi
+
+        shift_twice=true
+    fi
+}
+
+# Appends string to the cmake call
+append_args() {
+    if [ -n "$cmake_args" ]; then
+        cmake_args="$cmake_args $1"
+    else
+        cmake_args="$1"
+    fi
+}
+
+# Sets an environment variable in front of the cmake call
+append_env() {
+    if [ -n "$cmake_env" ]; then
+        cmake_env="$cmake_env $1=$2"
+    else
+        cmake_env="$1=$2"
+    fi
+}
+
+#Check if CMake is in $PATH
+if ! which cmake > /dev/null; then
+    error "cmake not found" 1
+else
+    notify "Found `cmake --version`"
+fi
+cmake=`which cmake`
+
+cmake_srcdir=`dirname $0`
+notify "Source dir is $cmake_srcdir"
+cmake_bindir=`pwd`
+notify "Binary dir is $cmake_bindir"
+
+debug=false
+
+#Read arguments
+while [ $# != 0 ]; do
+    #seperate key=value pairs
+    key=`echo $1 | cut -d'=' -f1`
+    value=`echo $1 | cut -s -d'=' -f2-`
+    shift_twice=false
+
+    case "$key" in
+    "--enable-debug")
+        debug=true
+        ;;
+    "--srcdir")
+        ensure_value "$2"
+        cmake_srcdir=$value
+        ;;
+    "--libpath")
+        ensure_value "$2"
+        append_args "-DLIB_SEARCH_PATH=$value"
+        ;;
+    "--toolchain-file")
+        ensure_value "$2"
+        append_args "-DCMAKE_TOOLCHAIN_FILE=$value"
+        ;;
+    "CC=")
+        ensure_value "$2"
+        append_args "-DCMAKE_C_COMPILER=$value"
+        ;;
+    "CXX=")
+        ensure_value "$2"
+        append_args "-DCMAKE_CXX_COMPILER=$value"
+        ;;
+    "CFLAGS=")
+        ensure_value "$2"
+        append_args "-DCMAKE_C_FLAGS=$value"
+        ;;
+    "CXXFLAGS=")
+        ensure_value "$2"
+        append_args "-DCMAKE_CXX_FLAGS=$value"
+        ;;
+    "--enable-"*)
+        feature=`echo $key | tail -c+10`
+        uppercase_feature=`echo $feature | tr '[:lower:]' '[:upper:]' | sed 's/\-/_/g'`
+        append_args "-DFEATURE_$uppercase_feature=ON"
+        ;;
+    "--disable-"*)
+        feature=`echo $key | tail -c+11`
+        uppercase_feature=`echo $feature | tr '[:lower:]' '[:upper:]' | sed 's/\-/_/g'`
+        append_args "-DFEATURE_$uppercase_feature=OFF"
+        ;;
+    "--with-"*)
+        package=`echo $key | tail -c+8`
+        uppercase_package=`echo $package | tr '[:lower:]' '[:upper:]' | sed 's/\-/_/g'`
+        append_args "-DPACKAGE_$uppercase_package=ON"
+        ;;
+    "--without-"*)
+        package=`echo $key | tail -c+11`
+        uppercase_package=`echo $package | tr '[:lower:]' '[:upper:]' | sed 's/\-/_/g'`
+        append_args "-DPACKAGE_$uppercase_package=OFF"
+        ;;
+    "--prefix")
+        ensure_value "$2"
+        prefix=$value
+        ;;
+    "--exec-prefix")
+        ensure_value "$2"
+        exec_prefix=$value
+        ;;
+    "--bindir")
+        ensure_value "$2"
+        bindir=$value
+        ;;
+    "--sbindir")
+        ensure_value "$2"
+        sbindir=$value
+        ;;
+    "--libexecdir")
+        ensure_value "$2"
+        libexecdir=$value
+        ;;
+    "--sysconfdir")
+        ensure_value "$2"
+        sysconfdir=$value
+        ;;
+    "--sharedstatedir")
+        ensure_value "$2"
+        sharedstatedir=$value
+        ;;
+    "--localstatedir")
+        ensure_value "$2"
+        localstatedir=$value
+        ;;
+    "--runstatedir")
+        ensure_value "$2"
+        runstatedir=$value
+        ;;
+    "--libdir")
+        ensure_value "$2"
+        libdir=$value
+        ;;
+    "--includedir")
+        ensure_value "$2"
+        includedir=$value
+        ;;
+    "--oldincludedir")
+        ensure_value "$2"
+        append_args "-DINSTALL_OLDINCLUDEDIR=$value"
+        ;;
+    "--datarootdir")
+        ensure_value "$2"
+        datarootdir=$value
+        ;;
+    "--datadir")
+        ensure_value "$2"
+        datadir=$value
+        ;;
+    "--infodir")
+        ensure_value "$2"
+        infodir=$value
+        ;;
+    "--localedir")
+        ensure_value "$2"
+        localedir=$value
+        ;;
+    "--mandir")
+        ensure_value "$2"
+        mandir=$value
+        ;;
+    "--docdir")
+        ensure_value "$2"
+        docdir=$value
+        ;;
+    "--htmldir")
+        ensure_value "$2"
+        htmldir=$value
+        ;;
+    "--dvidir")
+        ensure_value "$2"
+        dvidir=$value
+        ;;
+    "--pdfdir")
+        ensure_value "$2"
+        pdfdir=$value
+        ;;
+    "--psdir")
+        ensure_value "$2"
+        psdir=$value
+        ;;
+    *)
+        warning "Unknown option: $key"
+        ;;
+    esac
+    if $shift_twice; then
+        shift 2
+    else
+        shift 1
+    fi
+done
+
+if $debug; then
+    append_args "-DCMAKE_BUILD_TYPE=Debug"
+else
+    append_args "-DCMAKE_BUILD_TYPE=Release"
+fi
+
+#write config.status script
+cat > ./config.status << "EOF"
+#!/bin/sh
+
+error() {
+    echo "-- ERROR: $1"
+    exit $2;
+}
+
+warning() {
+    echo "-- WARNING: $1"
+}
+
+notify() {
+    echo "-- $1"
+}
+
+EOF
+
+if [ -n "$prefix" ]; then
+    echo "prefix=$prefix" >> ./config.status
+else
+    echo "prefix=/usr/local" >> ./config.status
+fi
+
+if [ -n "$exec_prefix" ]; then
+    echo "exec_prefix=$exec_prefix" >> ./config.status
+else
+    echo "exec_prefix=\$prefix" >> ./config.status
+fi
+
+if [ -n "$bindir" ]; then
+    echo "bindir=$bindir" >> ./config.status
+else
+    echo "bindir=\$exec_prefix/bin" >> ./config.status
+fi
+
+if [ -n "$sbindir" ]; then
+    echo "sbindir=$sbindir" >> ./config.status
+else
+    echo "sbindir=\$exec_prefix/sbin" >> ./config.status
+fi
+
+if [ -n "$libdir" ]; then
+    echo "libdir=$libdir" >> ./config.status
+else
+    echo "libdir=\$exec_prefix/lib" >> ./config.status
+fi
+
+if [ -n "$libexecdir" ]; then
+    echo "libexecdir=$libexecdir" >> ./config.status
+else
+    echo "libexecdir=\$exec_prefix/libexec" >> ./config.status
+fi
+
+if [ -n "$sysconfdir" ]; then
+    echo "sysconfdir=$sysconfdir" >> ./config.status
+else
+    echo "sysconfdir=\$prefix/etc" >> ./config.status
+fi
+
+if [ -n "$sharedstatedir" ]; then
+    echo "sharedstatedir=$sharedstatedir" >> ./config.status
+else
+    echo "sharedstatedir=\$prefix/com" >> ./config.status
+fi
+
+if [ -n "$localstatedir" ]; then
+    echo "localstatedir=$localstatedir" >> ./config.status
+else
+    echo "localstatedir=\$prefix/var" >> ./config.status
+fi
+
+if [ -n "$runstatedir" ]; then
+    echo "runstatedir=$runstatedir" >> ./config.status
+else
+    echo "runstatedir=\$localstatedir/run" >> ./config.status
+fi
+
+if [ -n "$includedir" ]; then
+    echo "includedir=$includedir" >> ./config.status
+else
+    echo "includedir=\$prefix/include" >> ./config.status
+fi
+
+if [ -n "$datarootdir" ]; then
+    echo "datarootdir=$datarootdir" >> ./config.status
+else
+    echo "datarootdir=\$prefix/share" >> ./config.status
+fi
+
+if [ -n "$datadir" ]; then
+    echo "datadir=$datadir" >> ./config.status
+else
+    echo "datadir=\$datarootdir" >> ./config.status
+fi
+
+if [ -n "$infodir" ]; then
+    echo "infodir=$infodir" >> ./config.status
+else
+    echo "infodir=\$datarootdir/info" >> ./config.status
+fi
+
+if [ -n "$localedir" ]; then
+    echo "localedir=$localedir" >> ./config.status
+else
+    echo "localedir=\$datarootdir/locale" >> ./config.status
+fi
+
+if [ -n "$mandir" ]; then
+    echo "mandir=$mandir" >> ./config.status
+else
+    echo "mandir=\$datarootdir/man" >> ./config.status
+fi
+
+if [ -n "$docdir" ]; then
+    echo "docdir=$docdir" >> ./config.status
+else
+    #Does not conform GNU Coding Standard, but we have
+    #no way to determine what the project name is.
+    echo "docdir=\$datarootdir/doc" >> ./config.status
+fi
+
+if [ -n "$htmldir" ]; then
+    echo "htmldir=$htmldir" >> ./config.status
+else
+    echo "htmldir=\$docdir" >> ./config.status
+fi
+
+if [ -n "$dvidir" ]; then
+    echo "dvidir=$dvidir" >> ./config.status
+else
+    echo "dvidir=\$docdir" >> ./config.status
+fi
+
+if [ -n "$pdfdir" ]; then
+    echo "pdfdir=$pdfdir" >> ./config.status
+else
+    echo "pdfdir=\$docdir" >> ./config.status
+fi
+
+if [ -n "$psdir" ]; then
+    echo "psdir=$psdir" >> ./config.status
+else
+    echo "psdir=\$docdir" >> ./config.status
+fi
+
+cat >> ./config.status << EOF
+$cmake_env $cmake --no-warn-unused-cli \
+    -DCMAKE_INSTALL_PREFIX=\$prefix \
+    -DINSTALL_PREFIX=\$prefix \
+    -DINSTALL_EXEC_PREFIX=\$exec_prefix \
+    -DINSTALL_BINDIR=\$bindir \
+    -DINSTALL_SBINDIR=\$sbindir \
+    -DINSTALL_LIBEXECDIR=\$libexecdir \
+    -DINSTALL_SYSCONFDIR=\$sysconfdir \
+    -DINSTALL_SHAREDSTATEDIR=\$sharedstatedir \
+    -DINSTALL_LOCALSTATEDIR=\$localstatedir \
+    -DINSTALL_RUNSTATEDIR=\$runstatedir \
+    -DINSTALL_LIBDIR=\$libdir \
+    -DINSTALL_INCLUDEDIR=\$includedir \
+    -DINSTALL_DATAROOTDIR=\$datarootdir \
+    -DINSTALL_DATADIR=\$datadir \
+    -DINSTALL_INFODIR=\$infodir \
+    -DINSTALL_LOCALEDIR=\$localedir \
+    -DINSTALL_MANDIR=\$mandir \
+    -DINSTALL_DOCDIR=\$docdir \
+    -DINSTALL_HTMLDIR=\$htmldir \
+    -DINSTALL_DVIDIR=\$dvidir \
+    -DINSTALL_PDFDIR=\$pdfdir \
+    -DINSTALL_PSDIR=\$psdir \
+    $cmake_args $cmake_srcdir
+
+cmake_exit_code=\$?
+
+if [ \$cmake_exit_code -ne 0 ]; then
+    error "CMake terminated with error code \$cmake_exit_code" \$cmake_exit_code
+    exit \$cmake_exit_code
+fi
+EOF
+
+chmod +x config.status
+notify "Executing config.status"
+
+./config.status
+config_exit=$?
+
+if [ $config_exit -ne 0 ]; then
+    error "config.status terminated with error code $config_exit" $config_exit
+fi
