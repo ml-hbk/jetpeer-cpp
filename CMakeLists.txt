@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(jetpeer_all VERSION 3.0.0 LANGUAGES CXX)
+project(jetpeer_all VERSION 3.0.1 LANGUAGES CXX)
 
 include(FetchContent)
 
@@ -21,6 +21,7 @@ else(jsoncpp_FOUND)
   endif()
   set(JSONCPP_WITH_POST_BUILD_UNITTEST OFF CACHE INTERNAL "")
   set(JSONCPP_WITH_TESTS OFF CACHE INTERNAL "")
+  set(JSONCPP_WITH_STRICT_ISO OFF)
   set(JSONCPP_DOWNLOAD_EXTRACT_TIMESTAMP ON)
   FetchContent_Declare(
     jsoncpp
