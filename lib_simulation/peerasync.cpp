@@ -60,6 +60,7 @@ namespace hbk
 			, m_port(port)
 			, m_name(name)
 			, m_debug(debug)
+			, m_eventLoop(eventloop)
 			, m_socket(eventloop)
 			, m_stopped(false)
 			, m_lengthBufferLevel(0)
@@ -240,9 +241,8 @@ namespace hbk
 //			return 0;
 //		}
 
-		int PeerAsync::sendMessage(const Json::Value&)
+		void PeerAsync::sendMessage(const Json::Value&)
 		{
-			return 0;
 		}
 
 

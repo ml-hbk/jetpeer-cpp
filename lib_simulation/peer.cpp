@@ -65,10 +65,6 @@ namespace hbk
 			Json::Value response;
 			return response[jsonrpc::RESULT] = 0;
 		}
-		
-		void Peer::configAsync(const std::string&, bool, responseCallback_t)
-		{
-		}
 
 		Json::Value Peer::callMethod(const std::string&, const Json::Value&)
 		{
@@ -80,16 +76,6 @@ namespace hbk
 		{
 			Json::Value response;
 			return response[jsonrpc::RESULT] = 0;
-		}
-
-		void Peer::callMethodAsync(const std::string& path, const Json::Value& args, responseCallback_t responseCb)
-		{
-			m_peerAsync.callMethodAsync(path, args, responseCb);
-		}
-
-		void Peer::callMethodAsync(const std::string& path, const Json::Value& args, double , responseCallback_t responseCb)
-		{
-			m_peerAsync.callMethodAsync(path, args, responseCb);
 		}
 
 		void Peer::addMethod(const std::string&, methodCallback_t)
@@ -129,20 +115,6 @@ namespace hbk
 		fetchId_t Peer::addFetch(const matcher_t&, fetchCallback_t)
 		{
 			return ++m_fetchId;
-		}
-
-		fetchId_t Peer::addFetchAsync(const matcher_t& matcher, fetchCallback_t fetchCb, responseCallback_t responseCb)
-		{
-			m_peerAsync.addFetchAsync(matcher, fetchCb, responseCb);
-			return ++m_fetchId;
-		}
-
-		void Peer::setStateValue(const std::string&, const Json::Value&)
-		{
-		}
-
-		void Peer::setStateValue(const std::string&, const Json::Value&, double)
-		{
 		}
 
 		/// set the value of the state/complex state

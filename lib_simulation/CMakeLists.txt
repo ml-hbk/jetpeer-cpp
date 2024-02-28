@@ -1,6 +1,6 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.16)
 
-project(cpp_jetpeer_simulation LANGUAGES CXX VERSION 1.2.10)
+project(cpp_jetpeer_simulation LANGUAGES CXX VERSION "${jetpeer_all_VERSION_MAJOR}.${jetpeer_all_VERSION_MINOR}.${jetpeer_all_VERSION_PATCH}")
 
 set( INTERFACE_INCLUDE_DIR ../include/jet)
 
@@ -16,7 +16,7 @@ set(PEERASYNC_SOURCES
   ../lib/jsoncpprpc_exception.cpp
   )
 
-add_library(jetpeerasync_simulation SHARED ${PEERASYNC_SOURCES})
+add_library(jetpeerasync_simulation ${PEERASYNC_SOURCES})
 add_library(jet::jetpeerasync ALIAS jetpeerasync_simulation)
 
 set_property(TARGET jetpeerasync_simulation APPEND PROPERTY PUBLIC_HEADER
@@ -36,13 +36,16 @@ set(PEERSYNC_SOURCES
   peer.cpp
   )
 
-add_library(jetpeer_simulation SHARED ${PEERSYNC_SOURCES})
+add_library(jetpeer_simulation ${PEERSYNC_SOURCES})
 add_library(jet::jetpeer ALIAS jetpeer_simulation)
 
 set_property(TARGET jetpeer_simulation APPEND PROPERTY PUBLIC_HEADER
     ${PEERSYNC_INTERFACE_HEADERS}
 )
 
+# Synchronous peer is a shell around the asynchronous peer
+# Programs using the Synchronous peer, have also to link the asynch peer
+target_link_libraries(jetpeer_simulation INTERFACE jetpeerasync_simulation)
 
 
 
@@ -50,6 +53,14 @@ set_property(TARGET jetpeer_simulation APPEND PROPERTY PUBLIC_HEADER
 include(CMakePackageConfigHelpers)
 
 foreach(tgt jetpeerasync_simulation jetpeer_simulation)
+
+  # When using this library, those will be added to the libraries to link against
+  # PUBLIC because stuff being build here requires the headers
+  target_link_libraries( ${tgt} PUBLIC
+    hbk::hbk
+    jsoncpp_lib
+  )
+
   if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
     target_link_libraries( ${tgt}
       ws2_32
