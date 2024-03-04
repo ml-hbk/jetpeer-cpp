@@ -2,6 +2,8 @@ project(jetpeer LANGUAGES CXX VERSION "${jetpeer_all_VERSION_MAJOR}.${jetpeer_al
 
 set( INTERFACE_INCLUDE_DIR ../include/jet)
 
+find_package(Threads)
+
 ####### libjetpeerasync
 set( PEERASYNC_INTERFACE_HEADERS
   ${INTERFACE_INCLUDE_DIR}/peerasync.hpp
@@ -37,7 +39,8 @@ set_property(TARGET jetpeer APPEND PROPERTY PUBLIC_HEADER
 
 # Synchronous peer is a shell around the asynchronous peer
 # Programs using the Synchronous peer, have also to link the asynch peer
-target_link_libraries(jetpeer INTERFACE jetpeerasync)
+# It also requires multithreading
+target_link_libraries(jetpeer INTERFACE jetpeerasync Threads::Threads)
 
 
 include(GNUInstallDirs)
