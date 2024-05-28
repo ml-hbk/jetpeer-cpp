@@ -31,7 +31,7 @@ else(jsoncpp_FOUND)
 endif(jsoncpp_FOUND)
 
 
-set(hbk_REQUIREDVERSION "2.0.1")
+set(hbk_REQUIREDVERSION "2.0.3")
 find_package(hbk ${hbk_REQUIREDVERSION} QUIET)
 if(hbk_FOUND)
   message(STATUS "Found hbk: ${hbk_VERSION} ${hbk_CONFIG}")
