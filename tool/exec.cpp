@@ -72,7 +72,7 @@ int main(int argc, char* argv[])
 			std::cout << "calling without any parameter..." << std::endl;
 		}
 
-		static const double timeout = 10;
+		constexpr double timeout = 10;
 		Json::Value result = peer.callMethod(path, params, timeout);
 		std::cout << "Result: " << result << std::endl;
 	} catch(const std::runtime_error& exc) {

@@ -187,9 +187,9 @@ TEST(synchronuous, testManyPeers)
 		std::stringstream path;
 		path << "test/many_peers/no" << peerIndex;
 #ifdef USE_UNIX_DOMAIN_SOCKETS
-		std::unique_ptr < hbk::jet::Peer > pPeer = std::make_unique < hbk::jet::Peer> (hbk::jet::JET_UNIX_DOMAIN_SOCKET_NAME, 0, "peerTest");
+		auto pPeer = std::make_unique < hbk::jet::Peer> (hbk::jet::JET_UNIX_DOMAIN_SOCKET_NAME, 0, "peerTest");
 #else
-		std::unique_ptr < hbk::jet::Peer > pPeer = std::make_unique < hbk::jet::Peer> ("127.0.0.1", hbk::jet::JETD_TCP_PORT, "peerTest");
+		auto pPeer = std::make_unique < hbk::jet::Peer> ("127.0.0.1", hbk::jet::JETD_TCP_PORT, "peerTest");
 #endif
 		hbk::jet::SetStateCbResult result;
 
