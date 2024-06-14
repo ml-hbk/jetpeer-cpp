@@ -4,23 +4,24 @@ project(cpp_jet_peer_tests LANGUAGES CXX)
 
 find_package(Threads REQUIRED)
 
-set(gtest_REQUIREDVERSION "1.12.0")
+set(GTest_REQUIREDVERSION "1.12.0")
 
-find_package(GTest ${gtest_REQUIREDVERSION} )
+find_package(GTest ${GTest_REQUIREDVERSION} )
 
-if(gtest_FOUND)
-  message(STATUS "Found GTest: ${gtest_VERSION} ${gtest_CONFIG}")
+if(GTest_FOUND)
+  message(STATUS "Found GTest: ${GTest_VERSION} ${GTest_CONFIG}")
 else()
-  message(STATUS "Fetching GTest ${gtest_REQUIREDVERSION}...")
+  message(STATUS "Fetching GTest ${GTest_REQUIREDVERSION}...")
   include(FetchContent)
-  set(gtest_WITH_POST_BUILD_UNITTEST OFF)
-  set(gtest_WITH_TESTS OFF)
-  set(INSTALL_GTEST OFF)
+  set(GTest_WITH_POST_BUILD_UNITTEST OFF)
+  set(GTest_WITH_TESTS OFF)
+  set(INSTALL_GTest OFF)
+  set(BUILD_GMOCK OFF)
   FetchContent_Declare(
-    gtest
-    URL https://github.com/google/googletest/archive/release-${gtest_REQUIREDVERSION}.zip
+    GTest
+    URL https://github.com/google/googletest/archive/release-${GTest_REQUIREDVERSION}.zip
   )
-  FetchContent_MakeAvailable(gtest)
+  FetchContent_MakeAvailable(GTest)
 endif()
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
@@ -108,7 +109,7 @@ foreach(tgt ${targets})
           -Wall -Werror ${CGOV_COMPILE_FLAGS} ${ASAN_COMPILE_FLAGS}>
     )
     target_link_options(${tgt} PRIVATE ${GCOV_LINK_FLAGS} )
-    target_link_libraries(${tgt} ${ASAN_LIB} ${GCOV_LIB} ${CMAKE_THREAD_LIBS_INIT} peer_test_lib hbk::hbk jsoncpp_lib GTest::gtest GTest::gtest_main)
+    target_link_libraries(${tgt} ${ASAN_LIB} ${GCOV_LIB} Threads::Threads peer_test_lib hbk::hbk jsoncpp_lib GTest::gtest GTest::gtest_main)
     target_include_directories(${tgt} PRIVATE ${Boost_INCLUDE_DIRS})
 
 
