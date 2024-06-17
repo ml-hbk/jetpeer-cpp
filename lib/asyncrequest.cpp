@@ -105,8 +105,8 @@ namespace hbk
 			responseCallback_t responseCallback;
 			{
 				std::lock_guard < std::mutex > lock(m_mtx_openRequestCbs);
-				auto iter = m_openRequestCbs.find(id);
-				if (iter == m_openRequestCbs.end()) {
+				const auto iter = m_openRequestCbs.find(id);
+				if (iter == m_openRequestCbs.cend()) {
 					syslog(LOG_ERR, "jet peer: No request with id='%u' is waiting for a response!", id);
 					return;
 				}

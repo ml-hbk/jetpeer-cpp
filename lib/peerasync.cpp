@@ -757,13 +757,13 @@ namespace hbk {
 				// this jet peer implementation uses unsigned numbers as fetch id when creating a fetch.
 				// The method inside fetch notifications is of the same type
 				{
-					fetchId_t fetchId = methodNode.asInt();
-					std::lock_guard < std::recursive_mutex > lock(m_mtx_fetchers);
-					auto iter = m_fetchers.find(fetchId);
-					if (iter!=m_fetchers.end()) {
-						// it is a notification for a fetch
-						const Json::Value& params = data[jsonrpc::PARAMS];
-						try {
+				fetchId_t fetchId = methodNode.asInt();
+				std::lock_guard < std::recursive_mutex > lock(m_mtx_fetchers);
+				const auto iter = m_fetchers.find(fetchId);
+				if (iter!=m_fetchers.cend()) {
+					// it is a notification for a fetch
+					const Json::Value& params = data[jsonrpc::PARAMS];
+					try {
 							iter->second.callback(params, 0);
 						} catch(const std::runtime_error &e) {
 							syslog(LOG_ERR, "Fetch callback '%s' threw exception '%s'!", iter->second.matcher.print().c_str(), e.what());
@@ -779,8 +779,8 @@ namespace hbk {
 					const std::string method(methodNode.asString());
 					{
 						std::lock_guard < std::recursive_mutex > lock(m_mtx_stateCallbacks);
-						auto iter = m_stateCallbacks.find(method);
-						if (iter != m_stateCallbacks.end()) {
+						const auto iter = m_stateCallbacks.find(method);
+						if (iter != m_stateCallbacks.cend()) {
 							// it is a state!
 							const Json::Value& value = data[jsonrpc::PARAMS][VALUE];
 
@@ -844,7 +844,7 @@ namespace hbk {
 					{
 						std::lock_guard < std::recursive_mutex > lock(m_mtx_methodCallbacks);
 						const auto iter = m_methodCallbacks.find(method);
-						if (iter != m_methodCallbacks.end()) {
+						if (iter != m_methodCallbacks.cend()) {
 							// it is a method!
 							Json::Value response;
 							try {
