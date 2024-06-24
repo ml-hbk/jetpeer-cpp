@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(jetpeer_all VERSION 3.0.5 LANGUAGES CXX)
+project(jetpeer_all VERSION 3.0.6 LANGUAGES CXX)
 
 include(FetchContent)
 
@@ -31,7 +31,7 @@ else(jsoncpp_FOUND)
 endif(jsoncpp_FOUND)
 
 
-set(hbk_REQUIREDVERSION "2.0.3")
+set(hbk_REQUIREDVERSION "2.1.0")
 find_package(hbk ${hbk_REQUIREDVERSION} QUIET)
 if(hbk_FOUND)
   message(STATUS "Found hbk: ${hbk_VERSION} ${hbk_CONFIG}")
