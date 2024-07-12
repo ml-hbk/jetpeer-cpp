@@ -27,7 +27,6 @@
 
 #include <atomic>
 #include <mutex>
-#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -334,7 +333,7 @@ namespace hbk
 
 
 			std::mutex m_sendMutex;
-			std::mutex m_receiveMutex; // is needed when working with ThreadPools and external eventloops. e.g. Qt
+			std::mutex m_receiveMutex; /// is needed when working with ThreadPools and external eventloops. e.g. Qt
 
 			/// buffer for length information of each received jet telegram
 			uint32_t m_bigEndianLengthBuffer;

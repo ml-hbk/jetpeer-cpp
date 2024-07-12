@@ -22,6 +22,7 @@
 // THE SOFTWARE.
 
 #include <future>
+#include <mutex>
 
 #include "syncrequest.h"
 

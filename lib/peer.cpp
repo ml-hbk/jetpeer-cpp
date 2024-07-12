@@ -21,18 +21,17 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#include <stdexcept>
-#include <functional>
 #include <thread>
-#include <chrono>
+
+#include "json/value.h"
 
 #include "hbk/sys/eventloop.h"
+#include "hbk/jsonrpc/jsonrpc_defines.h"
 
 #include "jet/defines.h"
 #include "jet/peer.hpp"
 #include "jet/peerasync.hpp"
 
-#include "asyncrequest.h"
 #include "syncrequest.h"
 
 /// otherwise unix domain socket is used which is faster but is not supported under windows and requires cjet 1.3
@@ -58,7 +57,12 @@ namespace hbk
 		Peer::Peer(const std::string &address, unsigned int port, const std::string& name, bool debug)
 			: m_peerAsync(m_eventloop, address, port, name, debug)
 		{
-			m_workerThread = std::thread(std::bind(&sys::EventLoop::execute, std::ref(m_eventloop)));
+			auto WorkerCb = [this]()
+			{
+				m_eventloop.execute();
+			};
+
+			m_workerThread = std::thread(WorkerCb);
 		}
 
 		Peer::~Peer()

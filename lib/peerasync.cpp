@@ -47,11 +47,12 @@
 #define LOG_CRIT stderr
 #endif
 
+#include "hbk/sys/eventloop.h"
+
 #include "jet/peerasync.hpp"
 #include "jet/defines.h"
 #include "asyncrequest.h"
 
-#include "hbk/sys/eventloop.h"
 
 
 /// A valid composed message always starts with '{' and ends with '}'
