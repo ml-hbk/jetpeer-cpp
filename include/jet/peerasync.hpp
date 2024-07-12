@@ -31,10 +31,14 @@
 #include <unordered_map>
 #include <vector>
 
+#include "boost/asio/io_context.hpp"
+
 #include <json/value.h>
 #include <json/reader.h>
 #include "hbk/jsonrpc/jsonrpc_defines.h"
-#include "hbk/communication/socketnonblocking.h"
+//#include "hbk/communication/socketnonblocking.h"
+
+#include "stream/Stream.hpp"
 
 #include "jet/defines.h"
 
@@ -77,7 +81,7 @@ namespace hbk
 			/// @param port default port is JETD_TCP_PORT, 0 means unix domain socket
 			/// @param name Name of the jet peer is optional
 			/// @param debug Switch debug log messages
-			PeerAsync(sys::EventLoop& eventloop, const std::string& address, unsigned int port=JETD_TCP_PORT, const std::string& name="", bool debug=false);
+			PeerAsync(boost::asio::io_context &eventloop, const std::string& address, unsigned int port=JETD_TCP_PORT, const std::string& name="", bool debug=false);
 
 			/// may not be move assigned!
 			PeerAsync& operator=(PeerAsync&& op) = delete;
@@ -240,16 +244,16 @@ namespace hbk
 			/// \throws exception on error
 			void sendMessage(const Json::Value &value);
 
-			/// If using yout own event loop, wait for this to get readable before calling receive()
-			sys::event getReceiverEvent() const
-			{
-				return m_socket.getEvent();
-			}
+//			/// If using yout own event loop, wait for this to get readable before calling receive()
+//			sys::event getReceiverEvent() const
+//			{
+//				return m_socket.getEvent();
+//			}
 
-			hbk::sys::EventLoop& getEventLoop() const
-			{
-				return m_eventLoop;
-			}
+//			hbk::sys::EventLoop& getEventLoop() const
+//			{
+//				return m_eventLoop;
+//			}
 
 			/// Called by event loop if data is available for read.
 			/// receives and processes messages until there is nothing to be received.
@@ -257,6 +261,9 @@ namespace hbk
 			/// \warning non-reentrant
 			/// \return -1: error, 0: nothing to be read
 			int receive();
+
+			void onSizeReceive(const boost::system::error_code&);
+			void onPayloadReceive(const boost::system::error_code&);
 
 
 		protected:
@@ -327,8 +334,9 @@ namespace hbk
 			std::string m_name;
 			bool m_debug;
 
-			hbk::sys::EventLoop& m_eventLoop;
-			hbk::communication::SocketNonblocking m_socket;
+			boost::asio::io_context& m_eventLoop;
+			std::unique_ptr<daq::stream::Stream> m_stream;
+			//hbk::communication::SocketNonblocking m_socket;
 			volatile bool m_stopped;
 
 
@@ -351,9 +359,8 @@ namespace hbk
 			std::recursive_mutex m_mtx_fetchers;
 
 
-			/// payload of jet telegram
-			std::vector < char > m_dataBuffer;
-			size_t m_dataBufferLevel;
+			/// payload size of jet telegram
+			size_t m_payloadSize;
 
 			/// this is use in a synchronized sequence. Hence we create in only once and reuse it.
 			std::unique_ptr<Json::CharReader> const m_reader;

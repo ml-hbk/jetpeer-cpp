@@ -64,7 +64,7 @@ foreach(tgt jetpeerasync jetpeer)
     SOVERSION ${PROJECT_VERSION_MAJOR}
     VERSION ${PROJECT_VERSION}
     CXX_STANDARD_REQUIRED ON
-    CXX_STANDARD 11
+    CXX_STANDARD 17
     CXX_EXTENSIONS OFF
   )
 
@@ -72,6 +72,7 @@ foreach(tgt jetpeerasync jetpeer)
   # PUBLIC because stuff being build here requires the headers
   target_link_libraries( ${tgt} PUBLIC
     hbk::hbk
+    daq::stream
     jsoncpp_lib
   )
 

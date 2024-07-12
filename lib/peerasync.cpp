@@ -47,7 +47,11 @@
 #define LOG_CRIT stderr
 #endif
 
-#include "hbk/sys/eventloop.h"
+#include "boost/asio/io_context.hpp"
+//#include "hbk/sys/eventloop.h"
+
+#include "stream/LocalClientStream.hpp"
+#include "stream/TcpClientStream.hpp"
 
 #include "jet/peerasync.hpp"
 #include "jet/defines.h"
@@ -85,17 +89,15 @@ namespace hbk {
 		}
 
 
-		PeerAsync::PeerAsync(sys::EventLoop& eventloop, const std::string &address, unsigned int port, const std::string& name, bool debug)
+		//PeerAsync::PeerAsync(sys::EventLoop& eventloop, const std::string &address, unsigned int port, const std::string& name, bool debug)
+		PeerAsync::PeerAsync(boost::asio::io_context& eventloop, const std::string &address, unsigned int port, const std::string& name, bool debug)
 			: m_address(address)
 			, m_port(port)
 			, m_name(name)
 			, m_debug(debug)
 			, m_eventLoop(eventloop)
-			, m_socket(eventloop)
 			, m_stopped(false)
 			, m_lengthBufferLevel(0)
-			, m_dataBuffer()
-			, m_dataBufferLevel(0)
 			, m_reader(rBuilder.newCharReader())
 		{
 			// Compose json without indentation. This saves lots of bandwidth and time!
@@ -115,43 +117,32 @@ namespace hbk {
 
 		void PeerAsync::start()
 		{
-			// clear all buffers. Important for reconnect.
-			m_lengthBufferLevel = 0;
-			m_dataBuffer.clear();
-			m_dataBufferLevel = 0;
 
+			boost::system::error_code retVal;
 
-
-			int retVal;
 
 			if (m_port!=0) {
 				// connect via tcp
 				std::string portString(std::to_string(m_port));
-				retVal = m_socket.connect(m_address, portString);
-				if (retVal<0) {
+				m_stream = std::make_unique<daq::stream::TcpClientStream>(m_eventLoop, m_address, std::to_string(m_port));
+				retVal = m_stream->init(); // m_socket.connect(m_address, portString);
+				if (retVal) {
 					std::string msg;
 					msg = "jet peerAsync could not connect to jetd (tcp: " + m_address + ":" + portString + ")!";
 					throw std::runtime_error(msg);
 				}
 			} else {
-				// unix domain socket (not supported by windows)
-#ifdef _WIN32
-				retVal = m_socket.connect("127.0.0.1", std::to_string(hbk::jet::JETD_TCP_PORT));
-				if (retVal<0) {
-					std::string msg;
-					msg = "jet peerAsync could not connect to jetd (tcp: localhost:" + std::to_string(hbk::jet::JETD_TCP_PORT) + ")!";
-					throw std::runtime_error(msg);
-				}
-#else
-				retVal = m_socket.connect(m_address);
-				if (retVal<0) {
+				m_stream = std::make_unique<daq::stream::LocalClientStream>(m_eventLoop, m_address);
+				retVal = m_stream->init();
+				if (retVal) {
 					std::string msg;
 					msg = "jet peerAsync could not connect to jetd (" + m_address + ")!";
 					throw std::runtime_error(msg);
 				}
-#endif
 			}
-			m_socket.setDataCb(std::bind(&PeerAsync::receive, this));
+
+			m_stream->asyncRead(std::bind(&PeerAsync::onSizeReceive, this, std::placeholders::_1), sizeof(uint32_t));
+			//m_socket.setDataCb(std::bind(&PeerAsync::receive, this));
 
 			configAsync(m_name, m_debug);
 			{
@@ -174,8 +165,7 @@ namespace hbk {
 		{
 			syslog(LOG_DEBUG, "jet peer '%s' %s:%u: Stopping...", m_name.c_str(), m_address.c_str(), m_port);
 			m_stopped = true;
-
-			m_socket.disconnect();
+			m_stream->close();
 
 			// Notify all fetchers
 			Json::Value empty;
@@ -219,100 +209,136 @@ namespace hbk {
 			}
 		}
 
-		int PeerAsync::receive()
+//		int PeerAsync::receive()
+//		{
+
+//			std::lock_guard < std::mutex > lck(m_receiveMutex);
+
+//			while (true) {
+//				// Receive until error or EWOULDBLOCK. It is important to read from jet damon as fast possible.
+//				while (m_lengthBufferLevel < sizeof(m_bigEndianLengthBuffer)) {
+//					// read length information
+//					uint8_t* plengthBuffer = reinterpret_cast < uint8_t* > (&m_bigEndianLengthBuffer);
+//					ssize_t retVal = m_socket.receive(plengthBuffer+m_lengthBufferLevel, sizeof(m_bigEndianLengthBuffer)-m_lengthBufferLevel);
+//					if (retVal<0) {
+//#ifdef _WIN32
+//						int lastError = WSAGetLastError();
+//						if ((lastError == WSAEWOULDBLOCK) || (lastError == ERROR_IO_PENDING)) {
+//#else
+//						if(errno == EWOULDBLOCK || errno == EAGAIN) {
+//#endif
+//							return 0;
+//						}
+//						syslog(LOG_ERR, "jet peer %s:%u: Error on receive '%s'", m_address.c_str(), m_port, strerror(errno));
+//						stop();
+//						return -1;
+//					} else if (retVal == 0) {
+//						syslog(LOG_DEBUG, "jet peer %s:%u: Connection closed", m_address.c_str(), m_port);
+//						stop();
+//						return 0;
+//					}
+//					m_lengthBufferLevel += static_cast < size_t > (retVal);
+
+//					if (m_lengthBufferLevel == sizeof(m_bigEndianLengthBuffer)) {
+//						// length information is complete: Prepare data buffer
+//						size_t len = ntohl(m_bigEndianLengthBuffer);
+//						if (len>MAX_MESSAGE_SIZE) {
+//							syslog(LOG_ERR, "jet peer %s:%u: Received message size (%zu) exceeds maximum message size (%zu). Closing connection!", m_address.c_str(), m_port, len, MAX_MESSAGE_SIZE);
+//							stop();
+//							return -1;
+//						}
+
+//						m_dataBuffer.resize(len);
+//					}
+//				}
+
+//				while(m_dataBufferLevel<m_dataBuffer.size()) {
+//					// length information is complete, proceed reading data
+//					ssize_t retVal = m_socket.receive(m_dataBuffer.data()+m_dataBufferLevel, m_dataBuffer.size()-m_dataBufferLevel);
+//					if(retVal<0) {
+//#ifdef _WIN32
+//						int lastError = WSAGetLastError();
+//						if ((lastError == WSAEWOULDBLOCK) || (lastError == ERROR_IO_PENDING)) {
+//#else
+//						if(errno == EWOULDBLOCK || errno == EAGAIN) {
+//#endif
+//							return 0;
+//						}
+//						syslog(LOG_ERR, "jet peer %s:%u: Error on receive '%s'", m_address.c_str(), m_port, strerror(errno));
+//						stop();
+//						return -1;
+//					} else if (retVal == 0) {
+//						stop();
+//						return 0;
+//					}
+//					m_dataBufferLevel += static_cast < size_t > (retVal);
+//				}
+
+//				// data package is complete. Process data and clear buffers.
+//				Json::Value data;
+//				// add space for the end to point to.
+//				m_dataBuffer.push_back('\0');
+//				if (m_reader->parse(m_dataBuffer.data(), &m_dataBuffer[m_dataBuffer.size()-1], &data, &parseErrors)) {
+//					receiveCallback(data);
+//				} else {
+//					if (m_dataBuffer.size() <= 2048 ) {
+//						// Don't put more into syslog!
+//						// Most likely we are somewhat lost in the stream. Have also a binary dump to allow forensic analysis
+//						std::stringstream binaryDump;
+//						binaryDump << std::hex;
+//						int binaryCharacter;
+
+//						for(auto iter : m_dataBuffer) {
+//							binaryCharacter = iter;
+//							binaryDump << binaryCharacter; //+= std::to_string(character);
+//							binaryDump << " ";
+//						}
+//						syslog(LOG_ERR, "jet peer %s:%u: Error '%s' while parsing received telegram (%zu byte) %s", m_address.c_str(), m_port, parseErrors.c_str(), m_dataBuffer.size(), binaryDump.str().c_str());
+//						syslog(LOG_ERR, "jet peer %s:%u: Error '%s' while parsing received telegram (%zu byte) '%.*s'", m_address.c_str(), m_port, parseErrors.c_str(), m_dataBuffer.size(), static_cast< int > (m_dataBuffer.size()), m_dataBuffer.data());
+//					} else {
+//						syslog(LOG_ERR, "jet peer %s:%u: Error '%s' while parsing received telegram (%zu byte)", m_address.c_str(), m_port, parseErrors.c_str(), m_dataBuffer.size());
+//					}
+//				}
+//				m_dataBuffer.clear();
+//				m_lengthBufferLevel = 0;
+//				m_dataBufferLevel = 0;
+//			}
+//		}
+
+		void PeerAsync::onSizeReceive(const boost::system::error_code &ec)
 		{
-
-			std::lock_guard < std::mutex > lck(m_receiveMutex);
-
-			while (true) {
-				// Receive until error or EWOULDBLOCK. It is important to read from jet damon as fast possible.
-				while (m_lengthBufferLevel < sizeof(m_bigEndianLengthBuffer)) {
-					// read length information
-					uint8_t* plengthBuffer = reinterpret_cast < uint8_t* > (&m_bigEndianLengthBuffer);
-					ssize_t retVal = m_socket.receive(plengthBuffer+m_lengthBufferLevel, sizeof(m_bigEndianLengthBuffer)-m_lengthBufferLevel);
-					if (retVal<0) {
-#ifdef _WIN32
-						int lastError = WSAGetLastError();
-						if ((lastError == WSAEWOULDBLOCK) || (lastError == ERROR_IO_PENDING)) {
-#else
-						if(errno == EWOULDBLOCK || errno == EAGAIN) {
-#endif
-							return 0;
-						}
-						syslog(LOG_ERR, "jet peer %s:%u: Error on receive '%s'", m_address.c_str(), m_port, strerror(errno));
-						stop();
-						return -1;
-					} else if (retVal == 0) {
-						syslog(LOG_DEBUG, "jet peer %s:%u: Connection closed", m_address.c_str(), m_port);
-						stop();
-						return 0;
-					}
-					m_lengthBufferLevel += static_cast < size_t > (retVal);
-
-					if (m_lengthBufferLevel == sizeof(m_bigEndianLengthBuffer)) {
-						// length information is complete: Prepare data buffer
-						size_t len = ntohl(m_bigEndianLengthBuffer);
-						if (len>MAX_MESSAGE_SIZE) {
-							syslog(LOG_ERR, "jet peer %s:%u: Received message size (%zu) exceeds maximum message size (%zu). Closing connection!", m_address.c_str(), m_port, len, MAX_MESSAGE_SIZE);
-							stop();
-							return -1;
-						}
-
-						m_dataBuffer.resize(len);
-					}
-				}
-
-				while(m_dataBufferLevel<m_dataBuffer.size()) {
-					// length information is complete, proceed reading data
-					ssize_t retVal = m_socket.receive(m_dataBuffer.data()+m_dataBufferLevel, m_dataBuffer.size()-m_dataBufferLevel);
-					if(retVal<0) {
-#ifdef _WIN32
-						int lastError = WSAGetLastError();
-						if ((lastError == WSAEWOULDBLOCK) || (lastError == ERROR_IO_PENDING)) {
-#else
-						if(errno == EWOULDBLOCK || errno == EAGAIN) {
-#endif
-							return 0;
-						}
-						syslog(LOG_ERR, "jet peer %s:%u: Error on receive '%s'", m_address.c_str(), m_port, strerror(errno));
-						stop();
-						return -1;
-					} else if (retVal == 0) {
-						stop();
-						return 0;
-					}
-					m_dataBufferLevel += static_cast < size_t > (retVal);
-				}
-
-				// data package is complete. Process data and clear buffers.
-				Json::Value data;
-				// add space for the end to point to.
-				m_dataBuffer.push_back('\0');
-				if (m_reader->parse(m_dataBuffer.data(), &m_dataBuffer[m_dataBuffer.size()-1], &data, &parseErrors)) {
-					receiveCallback(data);
-				} else {
-					if (m_dataBuffer.size() <= 2048 ) {
-						// Don't put more into syslog!
-						// Most likely we are somewhat lost in the stream. Have also a binary dump to allow forensic analysis
-						std::stringstream binaryDump;
-						binaryDump << std::hex;
-						int binaryCharacter;
-
-						for(auto iter : m_dataBuffer) {
-							binaryCharacter = iter;
-							binaryDump << binaryCharacter; //+= std::to_string(character);
-							binaryDump << " ";
-						}
-						syslog(LOG_ERR, "jet peer %s:%u: Error '%s' while parsing received telegram (%zu byte) %s", m_address.c_str(), m_port, parseErrors.c_str(), m_dataBuffer.size(), binaryDump.str().c_str());
-						syslog(LOG_ERR, "jet peer %s:%u: Error '%s' while parsing received telegram (%zu byte) '%.*s'", m_address.c_str(), m_port, parseErrors.c_str(), m_dataBuffer.size(), static_cast< int > (m_dataBuffer.size()), m_dataBuffer.data());
-					} else {
-						syslog(LOG_ERR, "jet peer %s:%u: Error '%s' while parsing received telegram (%zu byte)", m_address.c_str(), m_port, parseErrors.c_str(), m_dataBuffer.size());
-					}
-				}
-				m_dataBuffer.clear();
-				m_lengthBufferLevel = 0;
-				m_dataBufferLevel = 0;
+			if (ec) {
+				syslog(LOG_ERR, "Error %s when receiving size", ec.message().c_str());
 			}
+
+			int32_t bigEndianSize;
+			m_stream->copyDataAndConsume(&bigEndianSize, sizeof(bigEndianSize));
+			size_t m_payloadSize = ntohl(bigEndianSize);
+			if (m_payloadSize>MAX_MESSAGE_SIZE) {
+				syslog(LOG_ERR, "jet peer %s:%u: Received message size (%zu) exceeds maximum message size (%zu). Closing connection!", m_address.c_str(), m_port, m_payloadSize, MAX_MESSAGE_SIZE);
+				stop();
+				return;
+			}
+
+			m_stream->asyncRead(std::bind(&PeerAsync::onSizeReceive, this, std::placeholders::_1), m_payloadSize);
+		}
+
+		void PeerAsync::onPayloadReceive(const boost::system::error_code &ec)
+		{
+			if (ec) {
+				syslog(LOG_ERR, "Error %s when receiving payload", ec.message().c_str());
+			}
+
+			Json::Value dataJson;
+			const char* pData = reinterpret_cast<const char*>(m_stream->data());
+
+			if (m_reader->parse(pData, pData+m_payloadSize, &dataJson, &parseErrors)) {
+				receiveCallback(dataJson);
+			} else {
+				syslog(LOG_ERR, "jet peer %s:%u: Error '%s' while parsing received telegram (%zu byte)", m_address.c_str(), m_port, parseErrors.c_str(), m_payloadSize);
+			}
+
+			m_stream->asyncRead(std::bind(&PeerAsync::onSizeReceive, this, std::placeholders::_1), sizeof(uint32_t));
 		}
 
 		void PeerAsync::infoAsync(responseCallback_t resultCallback)
@@ -695,9 +721,6 @@ namespace hbk {
 
 		void PeerAsync::sendMessage(const Json::Value& value)
 		{
-			int result;
-			
-			
 			std::string msg = Json::writeString(wBuilder, value);
 			size_t len = msg.length();
 			if (len>MAX_MESSAGE_SIZE) {
@@ -707,17 +730,15 @@ namespace hbk {
 				throw hbk::exception::jsonrpcException(-1, errorMsg);
 			}
 			uint32_t lenBig = htonl(static_cast < uint32_t > (len));
-			communication::dataBlock_t dataBlocks[] = {
-				{ &lenBig, sizeof(lenBig) },
-				{ msg.c_str(), msg.length()},
-			};
 
-			{
-				// synchronize sending complete message!!!
-				std::lock_guard < std::mutex > lock(m_sendMutex);
-				result = static_cast < int > (m_socket.sendBlocks(dataBlocks, sizeof(dataBlocks)/sizeof(communication::dataBlock_t), false));
-			}
-			if (result < 0) {
+			boost::system::error_code ec;
+			daq::stream::ConstBufferVector buffers;
+			std::size_t bytesWritten;
+			buffers.push_back(boost::asio::const_buffer(&lenBig, sizeof(lenBig)));
+			buffers.push_back(boost::asio::const_buffer(msg.c_str(), msg.length()));
+
+			bytesWritten = m_stream->write(buffers, ec);
+			if (ec) {
 				std::string msg;
 				msg = std::string("could not send message: '") + strerror(errno) + "'";
 				syslog(LOG_ERR, "%s", msg.c_str());

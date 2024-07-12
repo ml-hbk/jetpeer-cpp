@@ -51,6 +51,27 @@ else(hbk_FOUND)
 endif(hbk_FOUND)
 
 
+set(stream_REQUIREDVERSION "1.0.2")
+find_package(stream ${stream_REQUIREDVERSION} QUIET)
+if(stream_FOUND)
+  message(STATUS "Found libstream: ${stream_VERSION} ${stream_CONFIG}")
+else(stream_FOUND)
+  message(STATUS "Fetching libstream ${stream_REQUIREDVERSION}...")
+  include(FetchContent)
+  if(CMAKE_VERSION VERSION_GREATER "3.24.0")
+    cmake_policy(SET CMP0135 OLD)
+  endif()
+  FetchContent_Declare(
+    stream
+    GIT_SHALLOW
+    GIT_REPOSITORY https://github.com/openDAQ/libstream.git
+    GIT_TAG v${stream_REQUIREDVERSION}
+  )
+  FetchContent_MakeAvailable(stream)
+endif(stream_FOUND)
+
+
+
 if(JETPEER_GENERATE_DOC)
   INCLUDE(cmake/generate_doxygen.cmake)
 endif()
