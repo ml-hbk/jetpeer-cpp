@@ -250,10 +250,10 @@ namespace hbk
 //				return m_socket.getEvent();
 //			}
 
-//			hbk::sys::EventLoop& getEventLoop() const
-//			{
-//				return m_eventLoop;
-//			}
+			boost::asio::io_context& getEventLoop() const
+			{
+				return m_eventLoop;
+			}
 
 			/// Called by event loop if data is available for read.
 			/// receives and processes messages until there is nothing to be received.

@@ -73,7 +73,6 @@ namespace hbk
 				// that handles all responmse callback functions.
 				// To achive this, we use a notifier with a callback that is executed in the eventloop context.
 				if (resultCb) {
-					// no std::make_unique because we are bound to C++11
 					auto NotifierCb = [this, e]()
 					{
 						Json::Value response;
@@ -82,10 +81,7 @@ namespace hbk
 						response[jsonrpc::ERR][jsonrpc::MESSAGE] = e.message();
 						handleResult(response);
 					};
-					// Here we create it because we need it only in this case!
-					m_openRequestCbs[m_id].errorNotifier = std::unique_ptr<hbk::sys::Notifier>(new hbk::sys::Notifier(peerAsync.getEventLoop()));
-					m_openRequestCbs[m_id].errorNotifier->set(NotifierCb);
-					m_openRequestCbs[m_id].errorNotifier->notify();
+					peerAsync.getEventLoop().dispatch(NotifierCb);
 				}
 			}
 		}
