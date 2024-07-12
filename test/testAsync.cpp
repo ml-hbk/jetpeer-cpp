@@ -29,14 +29,19 @@
 #include <future>
 #include <thread>
 
+
+
 #include <gtest/gtest.h>
 
 #include <json/value.h>
 #include <json/writer.h>
 
+
 #include "jet/defines.h"
 #include "jet/peerasync.hpp"
-#include "hbk/sys/eventloop.h"
+//#include "hbk/sys/eventloop.h"
+#include <boost/asio/io_context.hpp>
+
 #include "hbk/jsonrpc/jsonrpc_defines.h"
 
 #ifndef _WIN32
@@ -90,11 +95,12 @@ static void cbAsyncJsonResult( const Json::Value& result, std::promise < Json::V
 class AsyncTest : public ::testing::Test {
 
 protected:
-	hbk::sys::EventLoop eventloop;
+	boost::asio::io_context eventloop;
 
 	hbk::jet::PeerAsync peer;
 	// we promise to wait for the result before leaving!
-	std::future <int > asy;
+	//std::future <int > asy;
+	std::thread thread;
 
 	hbk::jet::fetchId_t m_fetchId;
 
@@ -105,13 +111,19 @@ protected:
 		: peer(eventloop, "127.0.0.1", hbk::jet::JETD_TCP_PORT, "AsyncTest")
 #endif
 	{
-		asy = std::async(std::launch::async, &hbk::sys::EventLoop::execute, std::ref(eventloop));
+		//asy = std::async(std::launch::async, &boost::asio::io_context::run, std::ref(eventloop));
+		auto worker = [this]()
+		{
+			eventloop.run();
+		};
+		thread = std::thread(worker);
 	}
 
 	virtual ~AsyncTest()
 	{
 		eventloop.stop();
-		asy.wait();
+		//asy.wait();
+		thread.join();
 	}
 
 	virtual void SetUp()
@@ -136,6 +148,7 @@ TEST_F(AsyncTest, testInfo)
 	ASSERT_EQ(futureStatus, std::future_status::ready);
 
 	Json::Value response = future.get();
+	std::cout << response.toStyledString() << std::endl;
 	ASSERT_TRUE(response[hbk::jsonrpc::RESULT]["name"].isString());
 	ASSERT_TRUE(response[hbk::jsonrpc::RESULT]["version"].isString());
 }
@@ -210,7 +223,7 @@ TEST_F(AsyncTest, test_async_fetch)
 #ifdef USE_UNIX_DOMAIN_SOCKETS
 		hbk::jet::PeerAsync fetchingPeer(eventloop, hbk::jet::JET_UNIX_DOMAIN_SOCKET_NAME, 0, "fetchingPeer");
 #else
-		hbk::jet::Peer fetchingPeer("127.0.0.1", hbk::jet::JETD_TCP_PORT, "fetchingPeer");
+		hbk::jet::PeerAsync fetchingPeer(eventloop, "127.0.0.1", hbk::jet::JETD_TCP_PORT, "fetchingPeer");
 #endif
 
 
