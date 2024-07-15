@@ -28,8 +28,8 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   set(CGOV_COMPILE_FLAGS -fno-omit-frame-pointer -fno-optimize-sibling-calls -ftest-coverage -fprofile-arcs)
   set(GCOV_LINK_FLAGS -fprofile-arcs -ftest-coverage)
   set(GCOV_LIB gcov)
-  set(ASAN_COMPILE_FLAGS -fsanitize=address -fno-omit-frame-pointer)
-  set(ASAN_LIB asan)
+#  set(ASAN_COMPILE_FLAGS -fsanitize=address -fno-omit-frame-pointer)
+#  set(ASAN_LIB asan)
 endif()
 
 
@@ -83,6 +83,7 @@ target_link_libraries(
   ${ASAN_LIB}
   ${GCOV_LIB}
   jsoncpp_lib
+  daq::stream
   hbk::hbk
 )
 
@@ -109,7 +110,8 @@ foreach(tgt ${targets})
           -Wall -Werror ${CGOV_COMPILE_FLAGS} ${ASAN_COMPILE_FLAGS}>
     )
     target_link_options(${tgt} PRIVATE ${GCOV_LINK_FLAGS} )
-    target_link_libraries(${tgt} ${ASAN_LIB} ${GCOV_LIB} Threads::Threads peer_test_lib hbk::hbk jsoncpp_lib GTest::gtest GTest::gtest_main)
+    target_link_libraries(${tgt} ${ASAN_LIB} ${GCOV_LIB} Threads::Threads peer_test_lib hbk::hbk daq::stream jsoncpp_lib GTest::gtest GTest::gtest_main)
+    #target_link_libraries(${tgt} ${ASAN_LIB} ${GCOV_LIB} Threads::Threads peer_test_lib hbk::hbk rrrrrrrrrrrrrrrrrrrr jsoncpp_lib GTest::gtest GTest::gtest_main)
     target_include_directories(${tgt} PRIVATE ${Boost_INCLUDE_DIRS})
 
 
