@@ -74,6 +74,8 @@ namespace hbk
 			 *  @defgroup anyPeer Methods called by any jet peer
 			 */
 
+			PeerAsync(boost::asio::io_context &eventloop, const std::string& address, const std::string& target, unsigned int port=JETD_TCP_PORT, const std::string& name="", bool debug=false);
+
 			/// @ingroup anyPeer
 			/// @throws std::runtime_error
 			/// @param eventloop Data is received in the context of this event loop. Response callback functions are also executed int this context.
@@ -326,11 +328,6 @@ namespace hbk
 			void setStateValueAsyncPrivate(const std::string& path, const Json::Value& value, Json::Value& params, responseCallback_t resultCallback);
 			void callMethodAsyncPrivate(const std::string& path, const Json::Value& args, Json::Value& params, responseCallback_t resultCb);
 
-			/// name or tcp address of jetd
-			/// name of unix domain socket
-			std::string m_address;
-			/// tcp port of jetd or 0 if using unix domain sockets
-			unsigned int m_port;
 			std::string m_name;
 			bool m_debug;
 

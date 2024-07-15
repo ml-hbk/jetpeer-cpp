@@ -48,10 +48,10 @@
 #endif
 
 #include "boost/asio/io_context.hpp"
-//#include "hbk/sys/eventloop.h"
 
 #include "stream/LocalClientStream.hpp"
 #include "stream/TcpClientStream.hpp"
+#include "stream/WebsocketClientStream.hpp"
 
 #include "jet/peerasync.hpp"
 #include "jet/defines.h"
@@ -88,12 +88,8 @@ namespace hbk {
 		{
 		}
 
-
-		//PeerAsync::PeerAsync(sys::EventLoop& eventloop, const std::string &address, unsigned int port, const std::string& name, bool debug)
-		PeerAsync::PeerAsync(boost::asio::io_context& eventloop, const std::string &address, unsigned int port, const std::string& name, bool debug)
-			: m_address(address)
-			, m_port(port)
-			, m_name(name)
+		PeerAsync::PeerAsync(boost::asio::io_context &eventloop, const std::string &address, const std::string &target, unsigned int port, const std::string &name, bool debug)
+			: m_name(name)
 			, m_debug(debug)
 			, m_eventLoop(eventloop)
 			, m_stopped(false)
@@ -103,12 +99,25 @@ namespace hbk {
 			// Compose json without indentation. This saves lots of bandwidth and time!
 			wBuilder.settings_["indentation"] = "";
 
-			if (m_port!=0) {
+			m_stream = std::make_unique<daq::stream::WebsocketClientStream>(m_eventLoop, address, std::to_string(port), target);
+			start();
+		}
+		PeerAsync::PeerAsync(boost::asio::io_context& eventloop, const std::string &address, unsigned int port, const std::string& name, bool debug)
+			: m_name(name)
+			, m_debug(debug)
+			, m_eventLoop(eventloop)
+			, m_stopped(false)
+			, m_lengthBufferLevel(0)
+			, m_reader(rBuilder.newCharReader())
+		{
+			// Compose json without indentation. This saves lots of bandwidth and time!
+			wBuilder.settings_["indentation"] = "";
+
+			if (port!=0) {
 				// connect via tcp
-				std::string portString(std::to_string(m_port));
-				m_stream = std::make_unique<daq::stream::TcpClientStream>(m_eventLoop, m_address, std::to_string(m_port));
+				m_stream = std::make_unique<daq::stream::TcpClientStream>(m_eventLoop, address, std::to_string(port));
 			} else {
-				m_stream = std::make_unique<daq::stream::LocalClientStream>(m_eventLoop, m_address);
+				m_stream = std::make_unique<daq::stream::LocalClientStream>(m_eventLoop, address);
 			}
 			start();
 		}
@@ -133,7 +142,6 @@ namespace hbk {
 			}
 
 			m_stream->asyncRead(std::bind(&PeerAsync::onSizeReceive, this, std::placeholders::_1), sizeof(uint32_t));
-			//m_socket.setDataCb(std::bind(&PeerAsync::receive, this));
 
 			configAsync(m_name, m_debug);
 			{
@@ -154,7 +162,7 @@ namespace hbk {
 
 		void PeerAsync::stop()
 		{
-			syslog(LOG_DEBUG, "jet peer '%s' %s:%u: Stopping...", m_name.c_str(), m_address.c_str(), m_port);
+			syslog(LOG_DEBUG, "jet peer '%s Stopping...", m_stream->remoteHost().c_str());
 			m_stopped = true;
 			m_stream->close();
 
@@ -186,7 +194,7 @@ namespace hbk {
 
 			size_t clearedRequestCount = AsyncRequest::clear();
 			if (clearedRequestCount>0) {
-				::syslog(LOG_WARNING, "%zu open request(s) left on destruction of jet peer %s. All open requests have been canceled!", clearedRequestCount, m_address.c_str());
+				::syslog(LOG_WARNING, "%zu open request(s) left on destruction of jet peer %s. All open requests have been canceled!", clearedRequestCount, m_stream->remoteHost().c_str());
 			}
 		}
 
@@ -212,7 +220,7 @@ namespace hbk {
 			m_payloadSize = ntohl(bigEndianSize);
 
 			if (m_payloadSize>MAX_MESSAGE_SIZE) {
-				syslog(LOG_ERR, "jet peer %s:%u: Received message size (%zu) exceeds maximum message size (%zu). Closing connection!", m_address.c_str(), m_port, m_payloadSize, MAX_MESSAGE_SIZE);
+				syslog(LOG_ERR, "jet peer %s: Received message size (%zu) exceeds maximum message size (%zu). Closing connection!", m_stream->remoteHost().c_str(), m_payloadSize, MAX_MESSAGE_SIZE);
 				stop();
 				return;
 			}
@@ -236,7 +244,7 @@ namespace hbk {
 			//if (m_reader->parse(pData, pData+m_payloadSize, &dataJson, &parseErrors)) {
 				receiveCallback(dataJson);
 			} else {
-				syslog(LOG_ERR, "jet peer %s:%u: Error '%s' while parsing received telegram (%zu byte)", m_address.c_str(), m_port, parseErrors.c_str(), m_payloadSize);
+				syslog(LOG_ERR, "jet peer %s: Error '%s' while parsing received telegram (%zu byte)", m_stream->remoteHost().c_str(), parseErrors.c_str(), m_payloadSize);
 			}
 
 			m_stream->consume(m_payloadSize);
@@ -634,9 +642,10 @@ namespace hbk {
 			uint32_t lenBig = htonl(static_cast < uint32_t > (len));
 
 			boost::system::error_code ec;
-			daq::stream::ConstBufferVector buffers;
-			buffers.push_back(boost::asio::const_buffer(&lenBig, sizeof(lenBig)));
-			buffers.push_back(boost::asio::const_buffer(msg.c_str(), msg.length()));
+
+			daq::stream::ConstBufferVector buffers(2);
+			buffers[0] = boost::asio::const_buffer(&lenBig, sizeof(lenBig));
+			buffers[1] = boost::asio::const_buffer(msg.c_str(), msg.length());
 
 			m_stream->write(buffers, ec);
 			if (ec) {

@@ -65,6 +65,17 @@ namespace hbk
 			m_workerThread = std::thread(WorkerCb);
 		}
 
+		Peer::Peer(const std::string &address, const std::string &websocketTarget, unsigned int port, const std::string& name, bool debug)
+			: m_peerAsync(m_eventloop, address, websocketTarget, port, name, debug)
+		{
+			auto WorkerCb = [this]()
+			{
+				m_eventloop.run();
+			};
+
+			m_workerThread = std::thread(WorkerCb);
+		}
+
 		Peer::~Peer()
 		{
 			m_eventloop.stop();
@@ -363,7 +374,6 @@ namespace hbk
 
 			Json::Value result = method.executeSync(m_peerAsync);
 			if(result.isMember(hbk::jsonrpc::ERR)) {
-//                std::cout << result.toStyledString() << std::endl;
 				throw jsoncpprpcException(result);
 			} else {
 				Json::Value &resultNode = result[hbk::jsonrpc::RESULT];

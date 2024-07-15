@@ -54,6 +54,7 @@ namespace hbk
 			/// @param name Optional name of the peer
 			/// @param debug Optional debug switch. false is default
 			Peer(const std::string& address, unsigned int port, const std::string& name="", bool debug=false);
+			Peer(const std::string& address, const std::string& websocketTarget, unsigned int port, const std::string& name="", bool debug=false);
 			Peer(const Peer&) = delete;
 			Peer& operator=(const Peer&) = delete;
 

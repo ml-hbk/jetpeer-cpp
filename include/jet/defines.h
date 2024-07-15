@@ -33,8 +33,13 @@
 #include "hbk/exception/jsonrpc_exception.h"
 namespace hbk {
 	namespace jet {
+		/// cjet default tcp listening port
 		const unsigned int JETD_TCP_PORT = 11122;
+		/// cjet default websocket listening port
 		const unsigned int JETWS_TCP_PORT = 11123;
+		/// cjet default webcoskcet target path
+		const char JETWS_TARGET_PATH[] ="/api/jet/";
+		/// cjet default unix domain socket endpoint
 		const char JET_UNIX_DOMAIN_SOCKET_NAME[] = "/var/run/jet.socket";
 
 		static const char NAME[] = "name";
