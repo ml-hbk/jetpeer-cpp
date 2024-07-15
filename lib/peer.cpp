@@ -59,7 +59,7 @@ namespace hbk
 		{
 			auto WorkerCb = [this]()
 			{
-				m_eventloop.execute();
+				m_eventloop.run();
 			};
 
 			m_workerThread = std::thread(WorkerCb);

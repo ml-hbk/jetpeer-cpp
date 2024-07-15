@@ -27,9 +27,11 @@
 #include <string>
 #include <thread>
 
+#include <boost/asio/io_context.hpp>
+
 #include <json/value.h>
 
-#include "hbk/sys/eventloop.h"
+
 
 #include "jet/peerasync.hpp"
 #include "jet/defines.h"
@@ -279,7 +281,7 @@ namespace hbk
 			SetStateResult setStateValuePrivate(const std::string& path, const Json::Value& value, Json::Value& params);
 			JsonRpcResponseObject callMethodPrivate(const std::string& path, const Json::Value& args, Json::Value& params);
 
-			hbk::sys::EventLoop m_eventloop;
+			boost::asio::io_context m_eventloop;
 			std::thread m_workerThread;
 			PeerAsync m_peerAsync;
 		};
