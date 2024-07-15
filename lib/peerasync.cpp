@@ -204,6 +204,7 @@ namespace hbk {
 		{
 			if (ec) {
 				syslog(LOG_ERR, "Error %s when receiving size", ec.message().c_str());
+				return;
 			}
 
 			int32_t bigEndianSize;
@@ -223,6 +224,7 @@ namespace hbk {
 		{
 			if (ec) {
 				syslog(LOG_ERR, "Error %s when receiving payload", ec.message().c_str());
+				return;
 			}
 
 			Json::Value dataJson;
