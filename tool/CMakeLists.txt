@@ -8,13 +8,13 @@ target_link_libraries(jetcat
     jet::jetpeerasync
 )
 
-add_executable(jetcatexternaleventloop
-  notifier.cpp
-  catexternaleventloop.cpp
-)
-target_link_libraries(jetcatexternaleventloop
-    jet::jetpeerasync
-)
+#add_executable(jetcatexternaleventloop
+#  notifier.cpp
+#  catexternaleventloop.cpp
+#)
+#target_link_libraries(jetcatexternaleventloop
+#    jet::jetpeerasync
+#)
 
 add_executable(jetget
   notifier.cpp
@@ -72,17 +72,17 @@ target_link_libraries( jetinfo
 
 
 ####### QuantumX specific!
-set(QXROUTING_SOURCES
-    qxrouting/Routing.cpp
-    qxrouting/Device.cpp
-    qxrouting/RoutedDevice.cpp
-)
+#set(QXROUTING_SOURCES
+#    qxrouting/Routing.cpp
+#    qxrouting/Device.cpp
+#    qxrouting/RoutedDevice.cpp
+#)
 
-add_executable( qxrouting ${QXROUTING_SOURCES} )
-target_link_libraries( qxrouting
-    jet::jetpeerasync
-    ${CMAKE_THREAD_LIBS_INIT}
-)
+#add_executable( qxrouting ${QXROUTING_SOURCES} )
+#target_link_libraries( qxrouting
+#    jet::jetpeerasync
+#    ${CMAKE_THREAD_LIBS_INIT}
+#)
 
 get_property(targets DIRECTORY "${CMAKE_CURRENT_LIST_DIR}" PROPERTY BUILDSYSTEM_TARGETS)
 foreach(tgt ${targets})

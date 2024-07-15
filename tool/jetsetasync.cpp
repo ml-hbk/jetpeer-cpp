@@ -24,6 +24,8 @@
 #include <stdexcept>
 #include <iostream>
 
+#include <boost/asio/io_context.hpp>
+
 #include <json/value.h>
 #include <json/reader.h>
 #include <json/writer.h>
@@ -32,7 +34,7 @@
 #include "jet/peerasync.hpp"
 
 
-hbk::sys::EventLoop eventloop;
+boost::asio::io_context eventloop;
 
 static void printSyntax()
 {
@@ -89,7 +91,7 @@ int main(int argc, char* argv[])
                 return EXIT_SUCCESS;
             }
             // Give control to the event loop. This causes the program to wait for the response.
-            eventloop.execute();
+			eventloop.run();
         } catch(const std::runtime_error& exc) {
             std::cerr << exc.what() << std::endl;
         }

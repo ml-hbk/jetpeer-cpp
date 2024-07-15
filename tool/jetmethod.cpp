@@ -30,7 +30,7 @@
 #include <Windows.h>
 #endif
 
-#include "hbk/sys/eventloop.h"
+#include "boost/asio/io_context.hpp"
 
 #include "jet/peerasync.hpp"
 
@@ -60,12 +60,12 @@ int main()
 	WSAStartup(2, &data);
 #endif
 	try {
-		hbk::sys::EventLoop eventloop;
+		boost::asio::io_context eventloop;
 		hbk::jet::PeerAsync peer(eventloop, "::1", hbk::jet::JETD_TCP_PORT); // connect to default port on localhost (ipv6)
 		static const std::string methodName("theMethod");
 		std::cout << "adding method '" << methodName << "'..." << std::endl;
 		peer.addMethodAsync(methodName, 3.1415927, &resultCb, &methodCb);
-		eventloop.execute();
+		eventloop.run();
 		peer.removeMethodAsync(methodName);
 		return EXIT_SUCCESS;
 	} catch(std::runtime_error &e){

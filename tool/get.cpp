@@ -29,7 +29,7 @@
 #include <libgen.h>
 #endif
 
-
+#include "boost/asio/io_context.hpp"
 
 #include "json/value.h"
 #include "json/writer.h"
@@ -38,7 +38,7 @@
 
 #include "notifier.h"
 
-static hbk::sys::EventLoop eventloop;
+static boost::asio::io_context eventloop;
 
 
 static void responseCb(const Json::Value& value)
@@ -50,7 +50,7 @@ static void responseCb(const Json::Value& value)
 		std::cout << "value " << item[hbk::jet::VALUE] << std::endl;
 	}
 	// stop whole program afterwards
-	eventloop.stop();
+	eventloop.run();
 }
 
 static void printSyntax()
@@ -92,7 +92,7 @@ int main(int argc, char* argv[])
 
 		peer.getAsync(match, &responseCb);
 
-		eventloop.execute();
+		eventloop.run();
 	} catch(const std::runtime_error& exc) {
 		std::cerr << exc.what() << std::endl;
 	}

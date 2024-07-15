@@ -30,8 +30,8 @@
 #include "json/value.h"
 #include "json/writer.h"
 
+#include "boost/asio/io_context.hpp"
 
-#include "hbk/sys/eventloop.h"
 
 #include "jet/peerasync.hpp"
 
@@ -62,7 +62,7 @@ int main(int argc, char* argv[])
 	const char* pType = argv[2];
 	const char* pValue = argv[3];
 
-	hbk::sys::EventLoop eventloop;
+	boost::asio::io_context eventloop;
 	// since the jet daemon runs on the local machine, we use Unix Domain Socket communication for better performance (TCP under Windows)
 	hbk::jet::PeerAsync peer(eventloop, hbk::jet::JET_UNIX_DOMAIN_SOCKET_NAME, 0);
 
@@ -118,7 +118,7 @@ int main(int argc, char* argv[])
 	};
 
 	peer.addStateAsync(pPath, value, 3.1415927, resultCb, setCb);
-	eventloop.execute();
+	eventloop.run();
 	peer.removeStateAsync(pPath);
 
 	return EXIT_SUCCESS;

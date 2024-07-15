@@ -30,6 +30,7 @@
 #endif
 
 
+#include "boost/asio/io_context.hpp"
 
 #include "json/value.h"
 #include "json/writer.h"
@@ -85,7 +86,7 @@ int main(int argc, char* argv[])
 			match.contains = argv[3];
 		}
 
-		hbk::sys::EventLoop eventloop;
+		boost::asio::io_context eventloop;
 
 #ifndef _WIN32
 		hbk::jet::PeerAsync peer(eventloop, address, port, basename(argv[0]));
@@ -102,7 +103,7 @@ int main(int argc, char* argv[])
 					match
 										);
 
-		eventloop.execute();
+		eventloop.run();
 
 		std::cout << "done!";
 

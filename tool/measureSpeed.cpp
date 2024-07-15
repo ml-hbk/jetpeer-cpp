@@ -37,7 +37,7 @@
 
 
 static const std::string STATE_PATH = "testSpeed/value";
-static const unsigned int cycleCount = 100000;
+static const unsigned int cycleCount = 1000;
 
 // callback function does not do anything but acknowledging the value
 static hbk::jet::SetStateCbResult stateCb(const Json::Value& value, const std::string&)

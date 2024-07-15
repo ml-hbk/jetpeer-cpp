@@ -32,12 +32,10 @@
 #include <libgen.h>
 #endif
 
-
+#include "boost/asio/io_context.hpp"
 
 #include "json/value.h"
 #include "json/writer.h"
-
-#include "hbk/sys/eventloop.h"
 
 #include "jet/peerasync.hpp"
 #include "jet/defines.h"
@@ -151,7 +149,7 @@ int main(int argc, char* argv[])
 			match.contains = argv[3];
 		}
 
-		hbk::sys::EventLoop eventloop;
+		boost::asio::io_context eventloop;
 
 #ifndef _WIN32
 		hbk::jet::PeerAsync peer(eventloop, address, port, basename(argv[0]));
@@ -167,7 +165,7 @@ int main(int argc, char* argv[])
 					std::bind(&print, std::placeholders::_1, std::placeholders::_2, "removed")
 										);
 
-		eventloop.execute();
+		eventloop.run();
 	} catch(const std::runtime_error& exc) {
 		std::cerr << exc.what() << std::endl;
 	}
