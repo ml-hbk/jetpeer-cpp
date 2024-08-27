@@ -160,6 +160,11 @@ namespace hbk {
 			}
 		}
 
+		void PeerAsync::startAsync()
+		{
+			m_stream->asyncInit(std::bind(&PeerAsync::onInitComplete, this, std::placeholders::_1));
+		}
+
 		void PeerAsync::stop()
 		{
 			syslog(LOG_DEBUG, "jet peer '%s Stopping...", m_stream->remoteHost().c_str());
@@ -205,6 +210,32 @@ namespace hbk {
 				return true;
 			} catch(...) {
 				return false;
+			}
+		}
+
+		void PeerAsync::onInitComplete(const boost::system::error_code& ec)
+		{
+			if (ec) {
+				syslog(LOG_ERR, "Could not connect to jetd %s '%s'!", m_stream->remoteHost().c_str(), ec.message().c_str());
+				return;
+			}
+
+			m_stream->asyncRead(std::bind(&PeerAsync::onSizeReceive, this, std::placeholders::_1), sizeof(uint32_t));
+
+			configAsync(m_name, m_debug);
+			{
+				// restore all known fetches
+				std::lock_guard < std::recursive_mutex > lock(m_mtx_fetchers);
+				for (const auto &iter: m_fetchers) {
+					const fetcher_t& fetcher = iter.second;
+					try {
+						restoreFetch(fetcher.matcher, iter.first);
+					} catch(const std::runtime_error& e) {
+						::syslog(LOG_ERR, "restoration of previous fetches failed ('%s')!", e.what());
+					} catch(...) {
+						::syslog(LOG_ERR, "restoration of previous fetches failed");
+					}
+				}
 			}
 		}
 

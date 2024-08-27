@@ -264,6 +264,8 @@ namespace hbk
 			/// \return -1: error, 0: nothing to be read
 			int receive();
 
+			/// called after execution of startAsync()
+			void onInitComplete(const boost::system::error_code& ec);
 			void onSizeReceive(const boost::system::error_code&);
 			void onPayloadReceive(const boost::system::error_code&);
 
@@ -280,6 +282,9 @@ namespace hbk
 			/// Connect to jet daemon and start jet peer
 			/// \throws std::runtime_error
 			void start();
+
+			void startAsync();
+
 			/// Disconnect from jet daemon and stop jet peer
 			void stop();
 
