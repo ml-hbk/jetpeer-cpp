@@ -52,14 +52,14 @@ auto fetchCb = [](const Json::Value&, int)
 	return;
 };
 
-static void measureSetNotify(const std::string& address, unsigned int port)
+static void measureSetNotify(const std::string& address, unsigned int port, const std::string& target)
 {
 	std::cout << "*****" << std::endl;
 	std::cout << "set/notify a single state." << std::endl;
 	std::cout << "-Setting a state equals a request from one jet peer over the jet daemon to another jet peer and getting the response back..." << std::endl;
 	std::cout << "-Notifying equals pushing a new value of an existing jet state from the jet peer to the jet daemon" << std::endl;
 	// Instances of hbk::jet::Peer have their own receiver thread.
-	hbk::jet::Peer jetPeer(address, port);
+	hbk::jet::Peer jetPeer(address, target, port);
 
 	try {
 		jetPeer.addStateAsync(STATE_PATH, Json::Value(), hbk::jet::responseCallback_t(), &stateCb);
@@ -192,6 +192,7 @@ int main(int argc, char *argv[])
 {
 	std::string address;
 	unsigned int port = 0;
+	std::string target;
 	if (argc == 2) {
 		std::cout << "using unix domain sockets" << std::endl;
 		address = argv[1];
@@ -199,15 +200,21 @@ int main(int argc, char *argv[])
 		std::cout << "using tcp/ip" << std::endl;
 		address = argv[1];
 		port = strtoul(argv[2], nullptr, 10);
+	} else if (argc == 4) {
+		std::cout << "using websocket" << std::endl;
+		address = argv[1];
+		port = strtoul(argv[2], nullptr, 10);
+		target = argv[3];
 	} else {
 		std::cout << "Syntax:" << std::endl;
-		std::cout << "measurespeed <address> <port> for tcp/ip default port is " << hbk::jet::JETD_TCP_PORT << std::endl;
+		std::cout << "measurespeed <address> <port> <target path> for websocket, default port is " << hbk::jet::JETWS_TCP_PORT << ", default target path is " << hbk::jet::JETWS_TARGET_PATH << std::endl;
+		std::cout << "measurespeed <address> <port> for tcp/ip, default port is " << hbk::jet::JETD_TCP_PORT << std::endl;
 		std::cout << "measurespeed <name> for unix domain socket default port is " << hbk::jet::JET_UNIX_DOMAIN_SOCKET_NAME << std::endl;
 		return EXIT_SUCCESS;
 	}
 
 	try {
-		measureSetNotify(address, port);
+		measureSetNotify(address, port, target);
 		measureFetch(address, port);
 		measureCreateStates(address, port);
 	} catch (const std::runtime_error &e) {

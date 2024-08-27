@@ -39,7 +39,6 @@
 
 #include "jet/defines.h"
 #include "jet/peerasync.hpp"
-//#include "hbk/sys/eventloop.h"
 #include <boost/asio/io_context.hpp>
 
 #include "hbk/jsonrpc/jsonrpc_defines.h"
@@ -108,7 +107,9 @@ protected:
 #ifdef USE_UNIX_DOMAIN_SOCKETS
 		: peer(eventloop, hbk::jet::JET_UNIX_DOMAIN_SOCKET_NAME, 0, "AsyncTest")
 #else
-		: peer(eventloop, "127.0.0.1", hbk::jet::JETD_TCP_PORT, "AsyncTest")
+		//: peer(eventloop, "127.0.0.1", hbk::jet::JETD_TCP_PORT, "AsyncTest")
+		/// \todo There seems to be a problem concerning the initial websocket handshake!
+		: peer(eventloop, "127.0.0.1", JETWS_TARGET_PATH, hbk::jet::JETWS_TCP_PORT, "AsyncTest")
 #endif
 	{
 		//asy = std::async(std::launch::async, &boost::asio::io_context::run, std::ref(eventloop));

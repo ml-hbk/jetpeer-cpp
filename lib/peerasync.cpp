@@ -650,7 +650,7 @@ namespace hbk {
 			m_stream->write(buffers, ec);
 			if (ec) {
 				std::string msg;
-				msg = std::string("could not send message: '") + strerror(errno) + "'";
+				msg = std::string("could not send message: '") + ec.message() + "'";
 				syslog(LOG_ERR, "%s", msg.c_str());
 				throw hbk::exception::jsonrpcException(-1, msg);
 			}
